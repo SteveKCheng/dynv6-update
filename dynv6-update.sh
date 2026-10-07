@@ -72,7 +72,16 @@ fi
 dynv6_zone="$1"
 dynv6_token="$(cat "${dynv6_token_file}")"
 
-[ -e "${dynv6_ipv6_file}" ] && old="$(cat "${dynv6_ipv6_file}")"
+old_address=
+if [ -r "$dynv6_ipv6_file" ] ; then
+    # Don't use cache if it is more than 2 days old
+    last_time="(stat -c%Y "$dynv6_ipv6_file")"
+    now="$(date +%s)"
+    time_diff=$(( now - last_time - 48 * 3600 ))
+    if [ "$time_diff" -lt 0 ] ; then
+        old_address="$(cat "${dynv6_ipv6_file}")"
+    fi
+fi
 
 if [ -z "$dynv6_ipv6_address" ] ; then
   if [ -n "${dynv6_device}" ]; then
@@ -90,7 +99,7 @@ if [ -z "$address" ]; then
   exit 2
 fi
 
-if [ "$old" = "$address" ]; then
+if [ "$old_address" = "$address" ]; then
   echo "IPv6 address unchanged since last update: $address"
   exit 0
 fi
@@ -104,7 +113,7 @@ curl -fsS "https://ipv4.dynv6.com/api/update?hostname=${dynv6_zone}&ipv4=auto&to
 
 # save current address
 rm -f "${dynv6_ipv6_file}"
-echo "$address" > "${dynv6_ipv6_file}"
+echo "$address" > "${dynv6_ipv6_file}" || true
 trap - exit
 
 echo "IPv6 address updated just now: $address"
