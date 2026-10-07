@@ -91,9 +91,12 @@ if [ -z "$address" ]; then
 fi
 
 if [ "$old" = "$address" ]; then
-  echo "IPv6 address unchanged"
+  echo "IPv6 address unchanged since last update: $address"
   exit 0
 fi
+
+# Clear cache if updating fails
+trap 'rm -f $dynv6_ipv6_file' exit
 
 # send addresses to dynv6
 curl -fsS "https://dynv6.com/api/update?hostname=${dynv6_zone}&ipv6=$address&token=${dynv6_token}"
@@ -102,4 +105,8 @@ curl -fsS "https://ipv4.dynv6.com/api/update?hostname=${dynv6_zone}&ipv4=auto&to
 # save current address
 rm -f "${dynv6_ipv6_file}"
 echo "$address" > "${dynv6_ipv6_file}"
+trap - exit
+
+echo "IPv6 address updated just now: $address"
+exit 0
 
